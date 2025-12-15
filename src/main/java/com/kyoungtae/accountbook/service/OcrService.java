@@ -1,20 +1,34 @@
 package com.kyoungtae.accountbook.service;
 
-import com.google.cloud.vision.v1.*;
-import com.google.protobuf.ByteString;
 import com.kyoungtae.accountbook.model.Transaction;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.TesseractException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 public class OcrService {
+
+    private final Tesseract tesseract;
+
+    public OcrService() {
+        tesseract = new Tesseract();
+        // Tesseract will use default data path
+        // For better Korean support, download Korean language data:
+        // https://github.com/tesseract-ocr/tessdata
+        tesseract.setLanguage("kor+eng"); // Korean + English
+        tesseract.setPageSegMode(1); // Automatic page segmentation with OSD
+        tesseract.setOcrEngineMode(1); // Neural nets LSTM engine
+    }
 
     public List<Transaction> parseReceipt(MultipartFile file) {
         System.out.println("Processing file: " + file.getOriginalFilename());
@@ -31,25 +45,12 @@ public class OcrService {
         }
     }
 
-    private String extractTextFromImage(MultipartFile file) throws IOException {
-        try (ImageAnnotatorClient vision = ImageAnnotatorClient.create()) {
-            ByteString imgBytes = ByteString.copyFrom(file.getBytes());
-            Image img = Image.newBuilder().setContent(imgBytes).build();
-            Feature feat = Feature.newBuilder().setType(Feature.Type.TEXT_DETECTION).build();
-            AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
-                    .addFeatures(feat)
-                    .setImage(img)
-                    .build();
-
-            BatchAnnotateImagesResponse response = vision.batchAnnotateImages(Collections.singletonList(request));
-            List<AnnotateImageResponse> responses = response.getResponsesList();
-
-            if (responses.isEmpty() || !responses.get(0).hasFullTextAnnotation()) {
-                throw new IOException("No text detected in image");
-            }
-
-            return responses.get(0).getFullTextAnnotation().getText();
+    private String extractTextFromImage(MultipartFile file) throws IOException, TesseractException {
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(file.getBytes()));
+        if (image == null) {
+            throw new IOException("Failed to read image");
         }
+        return tesseract.doOCR(image);
     }
 
     private List<Transaction> parseTransactionsFromText(String text) {

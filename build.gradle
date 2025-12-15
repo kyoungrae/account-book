@@ -41,8 +41,8 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'com.google.code.gson:gson:2.10.1'
     
-    // Google Cloud Vision API for OCR
-    implementation 'com.google.cloud:google-cloud-vision:3.20.0'
+    // Tesseract OCR for local text extraction (no cloud required)
+    implementation 'net.sourceforge.tess4j:tess4j:5.9.0'
 }
 
 tasks.named('test') {
