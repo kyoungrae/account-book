@@ -21,8 +21,15 @@ public class OcrService {
     private final Tesseract tesseract;
 
     public OcrService() {
+        // Set library path for JNA to find Tesseract
+        String tesseractPath = "/opt/homebrew/lib"; // Homebrew installation path on Apple Silicon
+        System.setProperty("jna.library.path", tesseractPath);
+
         tesseract = new Tesseract();
-        // Tesseract will use default data path
+
+        // Set data path for language files
+        tesseract.setDatapath("/opt/homebrew/share/tessdata");
+
         // For better Korean support, download Korean language data:
         // https://github.com/tesseract-ocr/tessdata
         tesseract.setLanguage("kor+eng"); // Korean + English
