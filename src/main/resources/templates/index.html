@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Account Book</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-wallet"></i> SmartAcc
+            </div>
+            <ul class="nav-links">
+                <li class="active" data-target="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
+                <li data-target="upload"><i class="fa-solid fa-file-invoice"></i> Upload Receipt</li>
+                <li data-target="transactions"><i class="fa-solid fa-list"></i> Transactions</li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header>
+                <h2 id="page-title">Dashboard</h2>
+                <div class="user-profile">
+                    <span>Admin</span>
+                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <section id="dashboard" class="view active">
+                <div class="stats-cards">
+                    <div class="card income">
+                        <h3>Income</h3>
+                        <p id="total-income">₩0</p>
+                    </div>
+                    <div class="card expense">
+                        <h3>Expense</h3>
+                        <p id="total-expense">₩0</p>
+                    </div>
+                    <div class="card balance">
+                        <h3>Balance</h3>
+                        <p id="total-balance">₩0</p>
+                    </div>
+                </div>
+                <div class="charts-container">
+                    <div class="chart-box">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="categoryPieChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Upload View -->
+            <section id="upload" class="view">
+                <div class="upload-container">
+                    <div class="drop-zone" id="drop-zone">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <p>Drag & Drop Receipt Image or Click to Upload</p>
+                        <input type="file" id="file-input" hidden accept="image/*">
+                    </div>
+                    <div id="preview-container" style="display:none;">
+                        <img id="image-preview" src="" alt="Preview">
+                    </div>
+                </div>
+                
+                <div id="extraction-result" class="form-container" style="display:none;">
+                    <h3>Verify Extracted Data</h3>
+                    <form id="transaction-form">
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="t-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Place</label>
+                            <input type="text" id="t-place" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input type="number" id="t-amount" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="t-category">
+                                <option value="Food">Food</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Housing">Housing</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select id="t-type">
+                                <option value="EXPENSE">Expense</option>
+                                <option value="INCOME">Income</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary">Save Transaction</button>
+                    </form>
+                    <div id="save-status"></div>
+                </div>
+            </section>
+
+            <!-- Transactions View -->
+            <section id="transactions" class="view">
+                <div class="table-container">
+                    <table id="transaction-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Place</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
