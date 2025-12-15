@@ -99,10 +99,18 @@
 
             <!-- Transactions View -->
             <section id="transactions" class="view">
+                <div class="table-actions">
+                    <button id="delete-selected-btn" class="btn-danger" style="display:none;">
+                        <i class="fa-solid fa-trash"></i> 선택 항목 삭제
+                    </button>
+                </div>
                 <div class="table-container">
                     <table id="transaction-table">
                         <thead>
                             <tr>
+                                <th style="width: 50px;">
+                                    <input type="checkbox" id="select-all-checkbox" />
+                                </th>
                                 <th>날짜</th>
                                 <th>카테고리</th>
                                 <th>장소</th>

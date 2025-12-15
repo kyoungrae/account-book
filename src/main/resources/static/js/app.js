@@ -244,6 +244,7 @@ $(document).ready(function () {
         sorted.forEach(t => {
             const row = `
                 <tr>
+                    <td><input type="checkbox" class="row-checkbox" data-id="${t.id}" /></td>
                     <td>${t.date}</td>
                     <td>${t.category}</td>
                     <td>${t.place}</td>
@@ -254,7 +255,64 @@ $(document).ready(function () {
             `;
             tbody.append(row);
         });
+
+        // Update checkbox event listeners
+        updateCheckboxListeners();
     }
+
+    function updateCheckboxListeners() {
+        // Row checkboxes
+        $('.row-checkbox').off('change').on('change', function () {
+            updateDeleteButton();
+            updateSelectAllCheckbox();
+        });
+
+        // Select all checkbox
+        $('#select-all-checkbox').off('change').on('change', function () {
+            const isChecked = $(this).prop('checked');
+            $('.row-checkbox').prop('checked', isChecked);
+            updateDeleteButton();
+        });
+    }
+
+    function updateSelectAllCheckbox() {
+        const totalCheckboxes = $('.row-checkbox').length;
+        const checkedCheckboxes = $('.row-checkbox:checked').length;
+        $('#select-all-checkbox').prop('checked', totalCheckboxes > 0 && totalCheckboxes === checkedCheckboxes);
+    }
+
+    function updateDeleteButton() {
+        const checkedCount = $('.row-checkbox:checked').length;
+        if (checkedCount > 0) {
+            $('#delete-selected-btn').show();
+        } else {
+            $('#delete-selected-btn').hide();
+        }
+    }
+
+    // Delete selected transactions
+    $('#delete-selected-btn').on('click', function () {
+        const selectedIds = [];
+        $('.row-checkbox:checked').each(function () {
+            selectedIds.push($(this).data('id'));
+        });
+
+        if (selectedIds.length === 0) return;
+
+        if (confirm(`선택한 ${selectedIds.length}개의 거래를 삭제하시겠습니까?`)) {
+            const deletePromises = selectedIds.map(id => axios.delete(`/api/transactions/${id}`));
+
+            Promise.all(deletePromises)
+                .then(() => {
+                    alert('선택한 거래가 삭제되었습니다.');
+                    loadTransactions();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('일부 거래 삭제에 실패했습니다.');
+                });
+        }
+    });
 
     window.deleteTransaction = function (id) {
         if (confirm('정말 이 거래를 삭제하시겠습니까?')) {
