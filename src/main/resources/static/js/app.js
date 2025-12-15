@@ -88,11 +88,12 @@ $(document).ready(function () {
         container.empty();
 
         extractedTransactions.forEach((transaction, index) => {
+            const uniqueId = `item-${Date.now()}-${index}`; // Generate unique ID
             const item = $(`
-                <div class="extracted-item" data-index="${index}">
+                <div class="extracted-item" data-id="${uniqueId}">
                     <div class="extracted-item-header">
                         <h4>거래 ${index + 1}</h4>
-                        <button class="remove-btn" onclick="removeExtractedItem(${index})">
+                        <button class="remove-btn" data-remove-id="${uniqueId}">
                             <i class="fa-solid fa-times"></i>
                         </button>
                     </div>
@@ -135,6 +136,18 @@ $(document).ready(function () {
             container.append(item);
         });
 
+        // Attach remove button handlers
+        $('.remove-btn').off('click').on('click', function () {
+            const removeId = $(this).data('remove-id');
+            $(`.extracted-item[data-id="${removeId}"]`).fadeOut(300, function () {
+                $(this).remove();
+                if ($('.extracted-item').length === 0) {
+                    $('#save-all-btn').hide();
+                    $('#extraction-result').hide();
+                }
+            });
+        });
+
         // Show save all button
         $('#save-all-btn').show();
     }
@@ -147,9 +160,11 @@ $(document).ready(function () {
     };
 
     // Save all extracted transactions
-    $('#save-all-btn').click(function () {
+    $('#save-all-btn').off('click').on('click', function () {
         const items = $('.extracted-item');
         const promises = [];
+
+        console.log(`Saving ${items.length} transactions...`); // Debug log
 
         items.each(function () {
             const item = $(this);
@@ -160,6 +175,7 @@ $(document).ready(function () {
                 category: item.find('.ext-category').val(),
                 type: item.find('.ext-type').val()
             };
+            console.log('Transaction to save:', transaction); // Debug log
             promises.push(axios.post('/api/transactions', transaction));
         });
 
