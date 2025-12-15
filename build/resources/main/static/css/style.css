@@ -374,3 +374,51 @@ th {
     font-size: 0.9rem;
     padding: 0.6rem;
 }
+
+/* Table Actions */
+.table-actions {
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-danger {
+    padding: 0.8rem 1.5rem;
+    background: linear-gradient(45deg, #e74c3c, #c0392b);
+    border: none;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-danger:hover {
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-danger i {
+    font-size: 1rem;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+#select-all-checkbox {
+    width: 20px;
+    height: 20px;
+}
+
+.row-checkbox {
+    margin: 0;
+}
