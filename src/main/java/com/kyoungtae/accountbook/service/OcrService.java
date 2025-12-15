@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 @Service
@@ -14,53 +15,55 @@ public class OcrService {
 
     public List<Transaction> parseReceipt(MultipartFile file) {
         // TODO: Integrate actual OCR API here (e.g., Google Vision API, Tesseract)
-        // Currently mocking the extraction for demonstration purposes.
+        // Currently generating random sample data based on file hash
         // In real implementation, this would extract multiple transactions from the
         // image
 
         System.out.println("Processing file: " + file.getOriginalFilename());
 
+        // Use file size and name to generate different sample data for different images
+        long seed = file.getSize() + file.getOriginalFilename().hashCode();
+        Random random = new Random(seed);
+
         List<Transaction> transactions = new ArrayList<>();
 
-        // Simulating multiple transactions extracted from one receipt image
-        // Example based on the uploaded image showing multiple transactions on
-        // 2025-11-01
+        // Sample data pools
+        String[][] sampleData = {
+                { "쿠팡이츠 - 쿠팡", "Food", "19100" },
+                { "올리브영신촌명물거리점", "Shopping", "19000" },
+                { "티머니버스", "Transportation", "3000" },
+                { "티머니지하철", "Transportation", "1550" },
+                { "라운지93", "Food", "11500" },
+                { "올리브영신촌종암점", "Shopping", "6300" },
+                { "닭술신촌점", "Food", "25000" },
+                { "모바일기후동화카드", "Shopping", "55000" },
+                { "네이버페이", "Shopping", "20000" },
+                { "스타벅스", "Food", "4500" },
+                { "GS25편의점", "Food", "8900" },
+                { "카카오택시", "Transportation", "12000" },
+                { "CGV영화관", "Entertainment", "14000" },
+                { "교보문고", "Shopping", "32000" }
+        };
 
-        Transaction t1 = new Transaction();
-        t1.setId(UUID.randomUUID().toString());
-        t1.setDate("2025-11-01");
-        t1.setAmount(19100);
-        t1.setPlace("쿠팡이츠 - 쿠팡");
-        t1.setCategory("Food");
-        t1.setType("EXPENSE");
-        transactions.add(t1);
+        // Generate 2-6 random transactions
+        int numTransactions = 2 + random.nextInt(5);
 
-        Transaction t2 = new Transaction();
-        t2.setId(UUID.randomUUID().toString());
-        t2.setDate("2025-11-01");
-        t2.setAmount(19000);
-        t2.setPlace("올리브영신촌명물거리점");
-        t2.setCategory("Shopping");
-        t2.setType("EXPENSE");
-        transactions.add(t2);
+        // Generate random date within last 30 days
+        LocalDate baseDate = LocalDate.now().minusDays(random.nextInt(30));
 
-        Transaction t3 = new Transaction();
-        t3.setId(UUID.randomUUID().toString());
-        t3.setDate("2025-11-01");
-        t3.setAmount(3000);
-        t3.setPlace("티머니버스");
-        t3.setCategory("Transportation");
-        t3.setType("EXPENSE");
-        transactions.add(t3);
+        for (int i = 0; i < numTransactions; i++) {
+            String[] data = sampleData[random.nextInt(sampleData.length)];
 
-        Transaction t4 = new Transaction();
-        t4.setId(UUID.randomUUID().toString());
-        t4.setDate("2025-11-01");
-        t4.setAmount(1550);
-        t4.setPlace("티머니지하철");
-        t4.setCategory("Transportation");
-        t4.setType("EXPENSE");
-        transactions.add(t4);
+            Transaction t = new Transaction();
+            t.setId(UUID.randomUUID().toString());
+            t.setDate(baseDate.plusDays(random.nextInt(3)).toString()); // Spread across 3 days
+            t.setPlace(data[0]);
+            t.setCategory(data[1]);
+            t.setAmount(Double.parseDouble(data[2]) + random.nextInt(1000)); // Add some variation
+            t.setType("EXPENSE");
+
+            transactions.add(t);
+        }
 
         return transactions;
     }
