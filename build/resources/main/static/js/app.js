@@ -72,8 +72,8 @@ $(document).ready(function () {
         axios.post('/api/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         }).then(response => {
-            const extractedTransactions = response.data; // Now an array
-            displayExtractedTransactions(extractedTransactions);
+            const data = response.data;
+            fillForm(data);
             $('#extraction-result').fadeIn();
             dropZone.find('p').text('Drag & Drop Receipt Image or Click to Upload');
         }).catch(err => {
@@ -82,101 +82,6 @@ $(document).ready(function () {
             dropZone.find('p').text('Drag & Drop Receipt Image or Click to Upload');
         });
     }
-
-    function displayExtractedTransactions(extractedTransactions) {
-        const container = $('#extracted-transactions-list');
-        container.empty();
-
-        extractedTransactions.forEach((transaction, index) => {
-            const item = $(`
-                <div class="extracted-item" data-index="${index}">
-                    <div class="extracted-item-header">
-                        <h4>거래 ${index + 1}</h4>
-                        <button class="remove-btn" onclick="removeExtractedItem(${index})">
-                            <i class="fa-solid fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>날짜</label>
-                            <input type="date" class="ext-date" value="${transaction.date}" />
-                        </div>
-                        <div class="form-group">
-                            <label>장소</label>
-                            <input type="text" class="ext-place" value="${transaction.place}" />
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>금액</label>
-                            <input type="number" class="ext-amount" value="${transaction.amount}" />
-                        </div>
-                        <div class="form-group">
-                            <label>카테고리</label>
-                            <select class="ext-category">
-                                <option value="Food" ${transaction.category === 'Food' ? 'selected' : ''}>Food</option>
-                                <option value="Transportation" ${transaction.category === 'Transportation' ? 'selected' : ''}>Transportation</option>
-                                <option value="Shopping" ${transaction.category === 'Shopping' ? 'selected' : ''}>Shopping</option>
-                                <option value="Entertainment" ${transaction.category === 'Entertainment' ? 'selected' : ''}>Entertainment</option>
-                                <option value="Healthcare" ${transaction.category === 'Healthcare' ? 'selected' : ''}>Healthcare</option>
-                                <option value="Other" ${transaction.category === 'Other' ? 'selected' : ''}>Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>유형</label>
-                            <select class="ext-type">
-                                <option value="EXPENSE" ${transaction.type === 'EXPENSE' ? 'selected' : ''}>지출</option>
-                                <option value="INCOME" ${transaction.type === 'INCOME' ? 'selected' : ''}>수입</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            `);
-            container.append(item);
-        });
-
-        // Show save all button
-        $('#save-all-btn').show();
-    }
-
-    window.removeExtractedItem = function (index) {
-        $(`.extracted-item[data-index="${index}"]`).remove();
-        if ($('.extracted-item').length === 0) {
-            $('#save-all-btn').hide();
-        }
-    };
-
-    // Save all extracted transactions
-    $('#save-all-btn').click(function () {
-        const items = $('.extracted-item');
-        const promises = [];
-
-        items.each(function () {
-            const item = $(this);
-            const transaction = {
-                date: item.find('.ext-date').val(),
-                place: item.find('.ext-place').val(),
-                amount: parseFloat(item.find('.ext-amount').val()),
-                category: item.find('.ext-category').val(),
-                type: item.find('.ext-type').val()
-            };
-            promises.push(axios.post('/api/transactions', transaction));
-        });
-
-        Promise.all(promises)
-            .then(() => {
-                alert(`${promises.length}개의 거래가 저장되었습니다!`);
-                $('#extracted-transactions-list').empty();
-                $('#preview-container').hide();
-                $('#extraction-result').hide();
-                $('#save-all-btn').hide();
-                loadTransactions();
-            })
-            .catch(err => {
-                console.error(err);
-                alert('일부 거래 저장에 실패했습니다.');
-            });
-    });
 
     function fillForm(data) {
         $('#t-date').val(data.date);

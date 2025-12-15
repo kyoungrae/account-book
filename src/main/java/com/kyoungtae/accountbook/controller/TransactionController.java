@@ -34,8 +34,8 @@ public class TransactionController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<Transaction> uploadReceipt(@RequestParam("file") MultipartFile file) {
-        Transaction textracted = ocrService.parseReceipt(file);
-        return ResponseEntity.ok(textracted);
+    public ResponseEntity<List<Transaction>> uploadReceipt(@RequestParam("file") MultipartFile file) {
+        List<Transaction> extractedTransactions = ocrService.parseReceipt(file);
+        return ResponseEntity.ok(extractedTransactions);
     }
 }
