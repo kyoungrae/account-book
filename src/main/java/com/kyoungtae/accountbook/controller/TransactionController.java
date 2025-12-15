@@ -33,6 +33,12 @@ public class TransactionController {
         transactionService.deleteTransaction(id);
     }
 
+    @PostMapping("/transactions/delete-batch")
+    public ResponseEntity<Void> deleteTransactionsBatch(@RequestBody List<String> ids) {
+        transactionService.deleteTransactions(ids);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/upload")
     public ResponseEntity<List<Transaction>> uploadReceipt(@RequestParam("file") MultipartFile file) {
         List<Transaction> extractedTransactions = ocrService.parseReceipt(file);
@@ -43,5 +49,15 @@ public class TransactionController {
     public ResponseEntity<List<Transaction>> addTransactionsBatch(@RequestBody List<Transaction> transactions) {
         List<Transaction> saved = transactionService.addTransactions(transactions);
         return ResponseEntity.ok(saved);
+    }
+
+    @PostMapping("/sync")
+    public ResponseEntity<String> syncWithGit() {
+        try {
+            transactionService.syncWithGit();
+            return ResponseEntity.ok("Git 동기화가 완료되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Git 동기화 실패: " + e.getMessage());
+        }
     }
 }

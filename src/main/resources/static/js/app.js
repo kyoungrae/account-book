@@ -300,16 +300,14 @@ $(document).ready(function () {
         if (selectedIds.length === 0) return;
 
         if (confirm(`선택한 ${selectedIds.length}개의 거래를 삭제하시겠습니까?`)) {
-            const deletePromises = selectedIds.map(id => axios.delete(`/api/transactions/${id}`));
-
-            Promise.all(deletePromises)
+            axios.post('/api/transactions/delete-batch', selectedIds)
                 .then(() => {
                     alert('선택한 거래가 삭제되었습니다.');
                     loadTransactions();
                 })
                 .catch(err => {
                     console.error(err);
-                    alert('일부 거래 삭제에 실패했습니다.');
+                    alert('거래 삭제에 실패했습니다.');
                 });
         }
     });
@@ -391,4 +389,33 @@ $(document).ready(function () {
             }
         });
     }
+
+    // Git Sync Button
+    $('#sync-git-btn').on('click', function () {
+        const btn = $(this);
+        const icon = btn.find('i');
+        const originalText = btn.html();
+
+        // Disable button and show loading state
+        btn.prop('disabled', true);
+        btn.html('<i class="fa-solid fa-sync fa-spin"></i> 동기화 중...');
+
+        axios.post('/api/sync')
+            .then(response => {
+                alert(response.data);
+                btn.html('<i class="fa-solid fa-check"></i> 동기화 완료');
+
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    btn.html(originalText);
+                    btn.prop('disabled', false);
+                }, 2000);
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Git 동기화에 실패했습니다. Git 저장소가 설정되어 있는지 확인하세요.');
+                btn.html(originalText);
+                btn.prop('disabled', false);
+            });
+    });
 });

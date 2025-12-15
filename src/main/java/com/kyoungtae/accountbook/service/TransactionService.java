@@ -21,7 +21,7 @@ public class TransactionService {
         return loadData();
     }
 
-    public Transaction addTransaction(Transaction transaction) {
+    public synchronized Transaction addTransaction(Transaction transaction) {
         List<Transaction> transactions = loadData();
         if (transaction.getId() == null) {
             transaction.setId(UUID.randomUUID().toString());
@@ -31,7 +31,7 @@ public class TransactionService {
         return transaction;
     }
 
-    public List<Transaction> addTransactions(List<Transaction> newTransactions) {
+    public synchronized List<Transaction> addTransactions(List<Transaction> newTransactions) {
         List<Transaction> transactions = loadData();
         for (Transaction transaction : newTransactions) {
             if (transaction.getId() == null) {
@@ -43,9 +43,15 @@ public class TransactionService {
         return newTransactions;
     }
 
-    public void deleteTransaction(String id) {
+    public synchronized void deleteTransaction(String id) {
         List<Transaction> transactions = loadData();
         transactions.removeIf(t -> t.getId().equals(id));
+        saveData(transactions);
+    }
+
+    public synchronized void deleteTransactions(List<String> ids) {
+        List<Transaction> transactions = loadData();
+        transactions.removeIf(t -> ids.contains(t.getId()));
         saveData(transactions);
     }
 
@@ -68,29 +74,132 @@ public class TransactionService {
     private synchronized void saveData(List<Transaction> transactions) {
         try (Writer writer = new FileWriter(DATA_FILE)) {
             gson.toJson(transactions, writer);
-            syncWithGit();
+            // Git sync removed - now manual via sync button
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void syncWithGit() {
+    public synchronized void syncWithGit() {
         try {
-            // Check if git is available and this is a repo
-            ProcessBuilder check = new ProcessBuilder("git", "status");
-            check.directory(new File("."));
-            if (check.start().waitFor() != 0)
-                return; // Not a git repo
+            File projectDir = new File(".");
 
-            // Add, Commit, Push
-            new ProcessBuilder("git", "add", DATA_FILE).start().waitFor();
-            new ProcessBuilder("git", "commit", "-m", "Auto-save: Update transactions").start().waitFor();
-            // Pushing might require auth, so we attempt it but don't crash if it fails
-            // In a real app, we might need a more robust credential manager
-            new ProcessBuilder("git", "push").start().waitFor();
+            // Check if git is available
+            if (runCommand(projectDir, "git", "status").exitCode != 0) {
+                System.err.println("Not a git repository");
+                return;
+            }
+
+            // 0. Get current branch name
+            String branch = runCommand(projectDir, "git", "symbolic-ref", "--short", "HEAD").output.trim();
+            if (branch.isEmpty())
+                branch = "main";
+
+            System.out.println("Syncing on branch: " + branch);
+
+            // 1. Load current local data (Backup in memory)
+            List<Transaction> localData = loadData();
+
+            // 2. Fetch remote changes
+            runCommand(projectDir, "git", "fetch", "origin", branch);
+
+            // 3. Read remote data directly from git object
+            // This prevents overwriting local file and avoids conflicts
+            CommandResult showResult = runCommand(projectDir, "git", "show", "origin/" + branch + ":" + DATA_FILE);
+            String remoteJson = showResult.output;
+
+            List<Transaction> remoteData = new ArrayList<>();
+            if (showResult.exitCode == 0 && !remoteJson.trim().isEmpty()) {
+                try {
+                    Type listType = new TypeToken<ArrayList<Transaction>>() {
+                    }.getType();
+                    remoteData = gson.fromJson(remoteJson, listType);
+                } catch (Exception e) {
+                    System.err.println("Failed to parse remote JSON: " + e.getMessage());
+                }
+            }
+            if (remoteData == null)
+                remoteData = new ArrayList<>();
+
+            // 4. Merge Data (Union by ID)
+            // Strategy: Remote data first, then overwrite with Local data (Local changes
+            // have priority)
+            java.util.Map<String, Transaction> mergeMap = new java.util.HashMap<>();
+
+            for (Transaction t : remoteData) {
+                mergeMap.put(t.getId(), t);
+            }
+            for (Transaction t : localData) {
+                mergeMap.put(t.getId(), t);
+            }
+
+            List<Transaction> mergedList = new ArrayList<>(mergeMap.values());
+            System.out.println("Merged " + localData.size() + " local items and " + remoteData.size()
+                    + " remote items into " + mergedList.size() + " items.");
+
+            // 5. Save merged data to file
+            saveData(mergedList);
+
+            // 6. Add, Commit, Push
+            runCommand(projectDir, "git", "add", DATA_FILE);
+
+            // Commit only if there are changes
+            CommandResult statusResult = runCommand(projectDir, "git", "status", "--porcelain");
+            if (!statusResult.output.isEmpty()) {
+                runCommand(projectDir, "git", "commit", "-m",
+                        "Sync transactions: Smart merge of local and remote data");
+            }
+
+            // Pull --rebase to ensure we are up to date before pushing (though we just
+            // merged)
+            runCommand(projectDir, "git", "pull", "--rebase", "origin", branch);
+
+            CommandResult pushResult = runCommand(projectDir, "git", "push", "origin", branch);
+            if (pushResult.exitCode != 0) {
+                throw new RuntimeException("Push failed: " + pushResult.error);
+            }
+
+            System.out.println("Successfully synced with Git (Smart Merge)");
 
         } catch (Exception e) {
-            System.err.println("Git sync warning: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Git sync warning: " + e.getMessage());
         }
+    }
+
+    private static class CommandResult {
+        int exitCode;
+        String output;
+        String error;
+
+        CommandResult(int exitCode, String output, String error) {
+            this.exitCode = exitCode;
+            this.output = output;
+            this.error = error;
+        }
+    }
+
+    private CommandResult runCommand(File dir, String... command) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.directory(dir);
+        Process p = pb.start();
+
+        StringBuilder output = new StringBuilder();
+        StringBuilder error = new StringBuilder();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null)
+                output.append(line).append("\n");
+        }
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getErrorStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null)
+                error.append(line).append("\n");
+        }
+
+        int exitCode = p.waitFor();
+        return new CommandResult(exitCode, output.toString(), error.toString());
     }
 }
