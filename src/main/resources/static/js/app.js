@@ -67,7 +67,7 @@ $(document).ready(function () {
         const formData = new FormData();
         formData.append('file', file);
 
-        dropZone.find('p').text('Extracting text...');
+        dropZone.find('p').text('텍스트 추출 중...');
 
         axios.post('/api/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
@@ -75,11 +75,11 @@ $(document).ready(function () {
             const extractedTransactions = response.data; // Now an array
             displayExtractedTransactions(extractedTransactions);
             $('#extraction-result').fadeIn();
-            dropZone.find('p').text('Drag & Drop Receipt Image or Click to Upload');
+            dropZone.find('p').text('영수증 이미지를 드래그하거나 클릭하여 업로드하세요');
         }).catch(err => {
             console.error(err);
-            alert('Failed to extract text');
-            dropZone.find('p').text('Drag & Drop Receipt Image or Click to Upload');
+            alert('텍스트 추출에 실패했습니다');
+            dropZone.find('p').text('영수증 이미지를 드래그하거나 클릭하여 업로드하세요');
         });
     }
 
@@ -115,12 +115,12 @@ $(document).ready(function () {
                         <div class="form-group">
                             <label>카테고리</label>
                             <select class="ext-category">
-                                <option value="Food" ${transaction.category === 'Food' ? 'selected' : ''}>Food</option>
-                                <option value="Transportation" ${transaction.category === 'Transportation' ? 'selected' : ''}>Transportation</option>
-                                <option value="Shopping" ${transaction.category === 'Shopping' ? 'selected' : ''}>Shopping</option>
-                                <option value="Entertainment" ${transaction.category === 'Entertainment' ? 'selected' : ''}>Entertainment</option>
-                                <option value="Healthcare" ${transaction.category === 'Healthcare' ? 'selected' : ''}>Healthcare</option>
-                                <option value="Other" ${transaction.category === 'Other' ? 'selected' : ''}>Other</option>
+                                <option value="Food" ${transaction.category === 'Food' ? 'selected' : ''}>음식</option>
+                                <option value="Transportation" ${transaction.category === 'Transportation' ? 'selected' : ''}>교통</option>
+                                <option value="Shopping" ${transaction.category === 'Shopping' ? 'selected' : ''}>쇼핑</option>
+                                <option value="Entertainment" ${transaction.category === 'Entertainment' ? 'selected' : ''}>여가</option>
+                                <option value="Healthcare" ${transaction.category === 'Healthcare' ? 'selected' : ''}>의료</option>
+                                <option value="Other" ${transaction.category === 'Other' ? 'selected' : ''}>기타</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -162,9 +162,9 @@ $(document).ready(function () {
     // Save all extracted transactions
     $('#save-all-btn').off('click').on('click', function () {
         const items = $('.extracted-item');
-        const promises = [];
+        const transactions = [];
 
-        console.log(`Saving ${items.length} transactions...`); // Debug log
+        console.log(`Preparing to save ${items.length} transactions...`); // Debug log
 
         items.each(function () {
             const item = $(this);
@@ -176,12 +176,14 @@ $(document).ready(function () {
                 type: item.find('.ext-type').val()
             };
             console.log('Transaction to save:', transaction); // Debug log
-            promises.push(axios.post('/api/transactions', transaction));
+            transactions.push(transaction);
         });
 
-        Promise.all(promises)
-            .then(() => {
-                alert(`${promises.length}개의 거래가 저장되었습니다!`);
+        // Use batch endpoint to save all transactions at once
+        axios.post('/api/transactions/batch', transactions)
+            .then(response => {
+                console.log('Saved transactions:', response.data);
+                alert(`${response.data.length}개의 거래가 저장되었습니다!`);
                 $('#extracted-transactions-list').empty();
                 $('#preview-container').hide();
                 $('#extraction-result').hide();
@@ -189,8 +191,8 @@ $(document).ready(function () {
                 loadTransactions();
             })
             .catch(err => {
-                console.error(err);
-                alert('일부 거래 저장에 실패했습니다.');
+                console.error('Error saving transactions:', err);
+                alert('거래 저장에 실패했습니다.');
             });
     });
 
@@ -215,13 +217,13 @@ $(document).ready(function () {
 
         axios.post('/api/transactions', transaction)
             .then(res => {
-                alert('Saved successfully!');
+                alert('저장되었습니다!');
                 $('#transaction-form')[0].reset();
                 $('#preview-container').hide();
                 $('#extraction-result').hide();
                 loadTransactions(); // Reload data
             })
-            .catch(err => alert('Error saving transaction'));
+            .catch(err => alert('거래 저장 중 오류가 발생했습니다'));
     });
 
     function loadTransactions() {
@@ -245,7 +247,7 @@ $(document).ready(function () {
                     <td>${t.date}</td>
                     <td>${t.category}</td>
                     <td>${t.place}</td>
-                    <td style="color: ${t.type === 'INCOME' ? '#2ecc71' : '#e74c3c'}">${t.type}</td>
+                    <td style="color: ${t.type === 'INCOME' ? '#2ecc71' : '#e74c3c'}">${t.type === 'INCOME' ? '수입' : '지출'}</td>
                     <td>₩${t.amount.toLocaleString()}</td>
                     <td><button onclick="deleteTransaction('${t.id}')" style="border:none;background:none;cursor:pointer;color:#e74c3c;"><i class="fa-solid fa-trash"></i></button></td>
                 </tr>
@@ -255,7 +257,7 @@ $(document).ready(function () {
     }
 
     window.deleteTransaction = function (id) {
-        if (confirm('Are you sure you want to delete this transaction?')) {
+        if (confirm('정말 이 거래를 삭제하시겠습니까?')) {
             axios.delete(`/api/transactions/${id}`).then(loadTransactions);
         }
     };
@@ -303,7 +305,7 @@ $(document).ready(function () {
             data: {
                 labels: sortedDates,
                 datasets: [{
-                    label: 'Daily Expenses (₩)',
+                    label: '일별 지출 (₩)',
                     data: sortedDates.map(d => dateMap[d]),
                     backgroundColor: '#4facfe',
                     borderRadius: 5

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Account Book</title>
+    <title>스마트 가계부</title>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- Icons -->
@@ -24,12 +24,12 @@
         <!-- Sidebar -->
         <nav class="sidebar">
             <div class="brand">
-                <i class="fa-solid fa-wallet"></i> SmartAcc
+                <i class="fa-solid fa-wallet"></i> 스마트 가계부
             </div>
             <ul class="nav-links">
-                <li class="active" data-target="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
-                <li data-target="upload"><i class="fa-solid fa-file-invoice"></i> Upload Receipt</li>
-                <li data-target="transactions"><i class="fa-solid fa-list"></i> Transactions</li>
+                <li class="active" data-target="dashboard"><i class="fa-solid fa-chart-pie"></i> 대시보드</li>
+                <li data-target="upload"><i class="fa-solid fa-file-invoice"></i> 영수증 업로드</li>
+                <li data-target="transactions"><i class="fa-solid fa-list"></i> 거래 내역</li>
             </ul>
         </nav>
 
@@ -37,9 +37,9 @@
         <main class="main-content">
             <!-- Header -->
             <header>
-                <h2 id="page-title">Dashboard</h2>
+                <h2 id="page-title">대시보드</h2>
                 <div class="user-profile">
-                    <span>Admin</span>
+                    <span>관리자</span>
                     <div class="avatar"><i class="fa-solid fa-user"></i></div>
                 </div>
             </header>
@@ -48,15 +48,15 @@
             <section id="dashboard" class="view active">
                 <div class="stats-cards">
                     <div class="card income">
-                        <h3>Income</h3>
+                        <h3>수입</h3>
                         <p id="total-income">₩0</p>
                     </div>
                     <div class="card expense">
-                        <h3>Expense</h3>
+                        <h3>지출</h3>
                         <p id="total-expense">₩0</p>
                     </div>
                     <div class="card balance">
-                        <h3>Balance</h3>
+                        <h3>잔액</h3>
                         <p id="total-balance">₩0</p>
                     </div>
                 </div>
@@ -75,11 +75,11 @@
                 <div class="upload-container">
                     <div class="drop-zone" id="drop-zone">
                         <i class="fa-solid fa-cloud-arrow-up"></i>
-                        <p>Drag & Drop Receipt Image or Click to Upload</p>
+                        <p>영수증 이미지를 드래그하거나 클릭하여 업로드하세요</p>
                         <input type="file" id="file-input" hidden accept="image/*">
                     </div>
                     <div id="preview-container" style="display:none;">
-                        <img id="image-preview" src="" alt="Preview">
+                        <img id="image-preview" src="" alt="미리보기">
                     </div>
                 </div>
 
@@ -103,12 +103,12 @@
                     <table id="transaction-table">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Category</th>
-                                <th>Place</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Action</th>
+                                <th>날짜</th>
+                                <th>카테고리</th>
+                                <th>장소</th>
+                                <th>유형</th>
+                                <th>금액</th>
+                                <th>작업</th>
                             </tr>
                         </thead>
                         <tbody>

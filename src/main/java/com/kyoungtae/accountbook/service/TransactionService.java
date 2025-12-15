@@ -31,6 +31,18 @@ public class TransactionService {
         return transaction;
     }
 
+    public List<Transaction> addTransactions(List<Transaction> newTransactions) {
+        List<Transaction> transactions = loadData();
+        for (Transaction transaction : newTransactions) {
+            if (transaction.getId() == null) {
+                transaction.setId(UUID.randomUUID().toString());
+            }
+            transactions.add(transaction);
+        }
+        saveData(transactions);
+        return newTransactions;
+    }
+
     public void deleteTransaction(String id) {
         List<Transaction> transactions = loadData();
         transactions.removeIf(t -> t.getId().equals(id));

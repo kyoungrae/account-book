@@ -38,4 +38,10 @@ public class TransactionController {
         List<Transaction> extractedTransactions = ocrService.parseReceipt(file);
         return ResponseEntity.ok(extractedTransactions);
     }
+
+    @PostMapping("/transactions/batch")
+    public ResponseEntity<List<Transaction>> addTransactionsBatch(@RequestBody List<Transaction> transactions) {
+        List<Transaction> saved = transactionService.addTransactions(transactions);
+        return ResponseEntity.ok(saved);
+    }
 }

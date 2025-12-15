@@ -88,11 +88,12 @@ $(document).ready(function () {
         container.empty();
 
         extractedTransactions.forEach((transaction, index) => {
+            const uniqueId = `item-${Date.now()}-${index}`; // Generate unique ID
             const item = $(`
-                <div class="extracted-item" data-index="${index}">
+                <div class="extracted-item" data-id="${uniqueId}">
                     <div class="extracted-item-header">
                         <h4>거래 ${index + 1}</h4>
-                        <button class="remove-btn" onclick="removeExtractedItem(${index})">
+                        <button class="remove-btn" data-remove-id="${uniqueId}">
                             <i class="fa-solid fa-times"></i>
                         </button>
                     </div>
@@ -135,6 +136,18 @@ $(document).ready(function () {
             container.append(item);
         });
 
+        // Attach remove button handlers
+        $('.remove-btn').off('click').on('click', function () {
+            const removeId = $(this).data('remove-id');
+            $(`.extracted-item[data-id="${removeId}"]`).fadeOut(300, function () {
+                $(this).remove();
+                if ($('.extracted-item').length === 0) {
+                    $('#save-all-btn').hide();
+                    $('#extraction-result').hide();
+                }
+            });
+        });
+
         // Show save all button
         $('#save-all-btn').show();
     }
@@ -147,9 +160,11 @@ $(document).ready(function () {
     };
 
     // Save all extracted transactions
-    $('#save-all-btn').click(function () {
+    $('#save-all-btn').off('click').on('click', function () {
         const items = $('.extracted-item');
-        const promises = [];
+        const transactions = [];
+
+        console.log(`Preparing to save ${items.length} transactions...`); // Debug log
 
         items.each(function () {
             const item = $(this);
@@ -160,12 +175,15 @@ $(document).ready(function () {
                 category: item.find('.ext-category').val(),
                 type: item.find('.ext-type').val()
             };
-            promises.push(axios.post('/api/transactions', transaction));
+            console.log('Transaction to save:', transaction); // Debug log
+            transactions.push(transaction);
         });
 
-        Promise.all(promises)
-            .then(() => {
-                alert(`${promises.length}개의 거래가 저장되었습니다!`);
+        // Use batch endpoint to save all transactions at once
+        axios.post('/api/transactions/batch', transactions)
+            .then(response => {
+                console.log('Saved transactions:', response.data);
+                alert(`${response.data.length}개의 거래가 저장되었습니다!`);
                 $('#extracted-transactions-list').empty();
                 $('#preview-container').hide();
                 $('#extraction-result').hide();
@@ -173,8 +191,8 @@ $(document).ready(function () {
                 loadTransactions();
             })
             .catch(err => {
-                console.error(err);
-                alert('일부 거래 저장에 실패했습니다.');
+                console.error('Error saving transactions:', err);
+                alert('거래 저장에 실패했습니다.');
             });
     });
 
