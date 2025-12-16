@@ -921,19 +921,27 @@ $(document).ready(function () {
         if (confirm(`선택한 ${selectedIds.length}개의 거래를 삭제하시겠습니까?`)) {
             axios.post('/api/transactions/delete-batch', selectedIds)
                 .then(() => {
-                    alert('선택한 거래가 삭제되었습니다.');
+                    showToast('선택한 거래가 삭제되었습니다.', 'success');
                     loadTransactions();
                 })
                 .catch(err => {
                     console.error(err);
-                    alert('거래 삭제에 실패했습니다.');
+                    showToast('거래 삭제에 실패했습니다.', 'error');
                 });
         }
     });
 
     window.deleteTransaction = function (id) {
         if (confirm('정말 이 거래를 삭제하시겠습니까?')) {
-            axios.delete(`/api/transactions/${id}`).then(loadTransactions);
+            axios.delete(`/api/transactions/${id}`)
+                .then(() => {
+                    showToast('거래가 삭제되었습니다.', 'success');
+                    loadTransactions();
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('삭제에 실패했습니다.', 'error');
+                });
         }
     };
 
