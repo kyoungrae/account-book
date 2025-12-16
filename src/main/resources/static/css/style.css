@@ -453,3 +453,34 @@ input[type="checkbox"] {
 .row-checkbox {
     margin: 0;
 }
+
+/* Upload Split Layout */
+.upload-split-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .upload-split-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.upload-split-layout .upload-container {
+    max-width: 100%;
+    margin: 0;
+}
+
+.upload-split-layout .form-container {
+    max-width: 100%;
+    margin: 0;
+}
+
+#preview-container img {
+    width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 10px;
+}
