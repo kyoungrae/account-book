@@ -1,26 +1,43 @@
 # Gradle
-.gradle
+.gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-# IDE
+# IDE - IntelliJ
 .idea/
-*.iml
 *.iws
+*.iml
 *.ipr
 out/
+
+# IDE - VS Code
 .vscode/
 
-# OS
+# IDE - Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# OS Specific
 .DS_Store
 Thumbs.db
+.Spotlight-V100
+.Trashes
 
-# Application
+# Logs
+*.log
+
+# Application Specific
 transactions.json
-
-# Google Cloud credentials
 google-credentials.json
-*.json
-!gradle/wrapper/*.json
+
+# Packaging
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
