@@ -13,6 +13,181 @@ $(document).ready(function () {
     let currentDashboardPeriod = PERIOD_ALL;
     let currentTransactionPeriod = PERIOD_ALL;
 
+    // --- Category & Type Management Start ---
+    const DEFAULT_CATEGORIES = [
+        { id: 'Food', name: '식비', color: '#ff9a9e' },
+        { id: 'Transportation', name: '교통', color: '#fad0c4' },
+        { id: 'Shopping', name: '쇼핑', color: '#a18cd1' },
+        { id: 'Entertainment', name: '문화/여가', color: '#fbc2eb' },
+        { id: 'Healthcare', name: '의료/건강', color: '#8fd3f4' },
+        { id: 'Other', name: '기타', color: '#84fab0' }
+    ];
+
+    const DEFAULT_TYPES = [
+        { id: 'EXPENSE', name: '지출', base: 'EXPENSE' },
+        { id: 'INCOME', name: '수입', base: 'INCOME' }
+    ];
+
+    let categories = JSON.parse(localStorage.getItem('categories')) || DEFAULT_CATEGORIES;
+    let types = JSON.parse(localStorage.getItem('types')) || DEFAULT_TYPES;
+
+    function renderCategoryList() {
+        const list = $('#category-list');
+        list.empty();
+
+        categories.forEach(cat => {
+            const item = `
+                <div class="category-item">
+                    <div class="category-info">
+                        <div class="color-dot" style="background-color: ${cat.color}"></div>
+                        <span class="category-name">${cat.name}</span>
+                    </div>
+                    <button class="delete-category-btn" onclick="deleteCategory('${cat.id}')">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            list.append(item);
+        });
+        updateCategorySelects();
+    }
+
+    function renderTypeList() {
+        const list = $('#type-list');
+        list.empty();
+
+        types.forEach(t => {
+            let color = '#e74c3c'; // EXPENSE (Red)
+            let typeLabel = '지출';
+
+            if (t.base === 'INCOME') {
+                color = '#2ecc71'; // Green
+                typeLabel = '수입';
+            } else if (t.base === 'SAVING') {
+                color = '#3498db'; // Blue
+                typeLabel = '저축';
+            }
+
+            const item = `
+                <div class="category-item">
+                    <div class="category-info">
+                        <span class="category-name" style="color: ${color}">
+                            ${t.name} (${typeLabel})
+                        </span>
+                    </div>
+                    <button class="delete-category-btn" onclick="deleteType('${t.id}')">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            list.append(item);
+        });
+        updateTypeSelects();
+    }
+
+    function updateCategorySelects() {
+        const selects = $('.man-category, .ext-category, #edit-category');
+        const optionsHtml = categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
+        selects.html(optionsHtml);
+
+        // Restore values if possible? (Skip for now as it refreshes on change)
+    }
+
+    function updateTypeSelects() {
+        const selects = $('.man-type, .ext-type, #edit-type');
+        const optionsHtml = types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        selects.html(optionsHtml);
+    }
+
+    // Add Category
+    $('#add-category-btn').on('click', function () {
+        const name = $('#new-category-name').val().trim();
+        const color = $('#new-category-color').val();
+
+        if (!name) {
+            alert('카테고리 이름을 입력해주세요.');
+            return;
+        }
+
+        const id = 'CAT-' + Date.now();
+
+        categories.push({ id, name, color });
+        saveCategories();
+
+        $('#new-category-name').val('');
+        renderCategoryList();
+    });
+
+    // Add Type
+    $('#add-type-btn').on('click', function () {
+        const name = $('#new-type-name').val().trim();
+        const base = $('#new-type-base').val();
+
+        if (!name) {
+            alert('유형 이름을 입력해주세요.');
+            return;
+        }
+
+        const id = 'TYPE-' + Date.now();
+
+        types.push({ id, name, base });
+        saveTypes();
+
+        $('#new-type-name').val('');
+        renderTypeList();
+    });
+
+    window.deleteCategory = function (id) {
+        if (!confirm('정말 이 카테고리를 삭제하시겠습니까?')) return;
+
+        categories = categories.filter(c => c.id !== id);
+        saveCategories();
+        renderCategoryList();
+    };
+
+    window.deleteType = function (id) {
+        // Protect default types
+        if (id === 'EXPENSE' || id === 'INCOME') {
+            alert('기본 유형은 삭제할 수 없습니다.');
+            return;
+        }
+        if (!confirm('정말 이 유형을 삭제하시겠습니까?')) return;
+        types = types.filter(t => t.id !== id);
+        saveTypes();
+        renderTypeList();
+    };
+
+    function saveCategories() {
+        localStorage.setItem('categories', JSON.stringify(categories));
+    }
+
+    function saveTypes() {
+        localStorage.setItem('types', JSON.stringify(types));
+    }
+
+    function getCategoryOptionsHtml(selectedId) {
+        return categories.map(cat => `<option value="${cat.id}" ${cat.id === selectedId ? 'selected' : ''}>${cat.name}</option>`).join('');
+    }
+
+    function getTypeOptionsHtml(selectedId) {
+        return types.map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${t.name}</option>`).join('');
+    }
+
+    function getTypeBase(typeId) {
+        const type = types.find(t => t.id === typeId);
+        return type ? type.base : 'EXPENSE'; // Default to Expense if unknown
+    }
+
+    function getTypeName(typeId) {
+        const type = types.find(t => t.id === typeId);
+        return type ? type.name : typeId;
+    }
+
+    // Initialize
+    renderCategoryList();
+    renderTypeList();
+    // --- Category & Type Management End ---
+
     // Load initial data
     loadTransactions();
 
@@ -36,6 +211,17 @@ $(document).ready(function () {
         if (target === 'dashboard') {
             updateDashboard();
         }
+    });
+
+    // Sub-tab switching for Categories/Types
+    $('#categories .filter-tab').click(function () {
+        const target = $(this).data('sub-target');
+
+        $('#categories .filter-tab').removeClass('active');
+        $(this).addClass('active');
+
+        $('#manage-categories, #manage-types').hide();
+        $('#' + target).show();
     });
 
     // --- Direct Input Logic Start ---
@@ -72,12 +258,7 @@ $(document).ready(function () {
                     <div class="form-group">
                         <label>카테고리</label>
                         <select class="man-category">
-                            <option value="Food">식비</option>
-                            <option value="Transportation">교통</option>
-                            <option value="Shopping">쇼핑</option>
-                            <option value="Entertainment">문화/여가</option>
-                            <option value="Healthcare">의료/건강</option>
-                            <option value="Other">기타</option>
+                            ${getCategoryOptionsHtml()}
                         </select>
                     </div>
                     <div class="form-group">
@@ -125,12 +306,13 @@ $(document).ready(function () {
     });
 
     // Initial remove handler for the first item (though it's hidden initially)
-    window.removeManualItem = function (id) {
-        $(`.manual-item[data-id="${id}"]`).remove();
-        updateManualItemHeaders();
-        if ($('.manual-item').length === 1) {
-            $('.manual-item .remove-manual-btn').hide();
-        }
+    window.removeManualItem = function (uniqueId) {
+        $(`.manual-item[data-id="${uniqueId}"]`).slideUp(200, function () {
+            $(this).remove();
+            if ($('.manual-item').length === 1) {
+                $('.manual-item .remove-manual-btn').hide();
+            }
+        });
     };
 
     function updateManualItemHeaders() {
@@ -144,17 +326,20 @@ $(document).ready(function () {
         }
     }
 
+    // --- Direct Input Logic ---
+    // Save Manual Input
     $('#save-manual-btn').on('click', function () {
+        const items = $('.manual-item');
         const transactions = [];
         let isValid = true;
 
-        $('.manual-item').each(function () {
+        items.each(function () {
             const item = $(this);
             const date = item.find('.man-date').val();
             const place = item.find('.man-place').val();
             const amount = parseFloat(item.find('.man-amount').val());
             const category = item.find('.man-category').val();
-            const type = item.find('.man-type').val();
+            const type = item.find('.man-type').val(); // Correct selector
             const memo = item.find('.man-memo').val();
 
             if (!date || !place || isNaN(amount)) {
@@ -167,7 +352,7 @@ $(document).ready(function () {
         });
 
         if (!isValid) {
-            alert('모든 필수 항목을 입력해주세요.');
+            showToast('모든 필수 항목을 입력해주세요.', 'error');
             return;
         }
 
@@ -176,7 +361,7 @@ $(document).ready(function () {
         axios.post('/api/transactions/batch', transactions)
             .then(res => {
                 $('#loading-screen').fadeOut();
-                // alert(`${res.data.length}개의 거래가 저장되었습니다!`); // Removed alert
+                showToast(`${res.data.length}개의 거래가 저장되었습니다!`, 'success');
 
                 // Reset form to one empty row
                 $('#manual-input-list').empty();
@@ -190,11 +375,12 @@ $(document).ready(function () {
 
                 // Reset headers
                 updateManualItemHeaders();
+                loadTransactions(); // ADDED: Refresh transactions
 
             })
             .catch(err => {
                 $('#loading-screen').fadeOut();
-                alert('저장 중 오류가 발생했습니다.');
+                showToast('저장 중 오류가 발생했습니다.', 'error');
             });
     });
 
@@ -385,9 +571,10 @@ $(document).ready(function () {
             $('.upload-split-layout').addClass('active');
             $('#extraction-result').fadeIn();
             dropZone.find('p').text('영수증 이미지를 드래그하거나 클릭하여 업로드하세요');
+            showToast('텍스트 추출이 완료되었습니다. 내역을 확인하고 저장하세요.', 'success');
         }).catch(err => {
             console.error(err);
-            alert('텍스트 추출에 실패했습니다');
+            showToast('텍스트 추출에 실패했습니다', 'error');
             dropZone.find('p').text('영수증 이미지를 드래그하거나 클릭하여 업로드하세요');
         });
     }
@@ -422,16 +609,11 @@ $(document).ready(function () {
                             <input type="number" class="ext-amount" value="${transaction.amount}" />
                         </div>
                         <div class="form-group">
-                            <label>카테고리</label>
-                            <select class="ext-category">
-                                <option value="Food" ${transaction.category === 'Food' ? 'selected' : ''}>음식</option>
-                                <option value="Transportation" ${transaction.category === 'Transportation' ? 'selected' : ''}>교통</option>
-                                <option value="Shopping" ${transaction.category === 'Shopping' ? 'selected' : ''}>쇼핑</option>
-                                <option value="Entertainment" ${transaction.category === 'Entertainment' ? 'selected' : ''}>여가</option>
-                                <option value="Healthcare" ${transaction.category === 'Healthcare' ? 'selected' : ''}>의료</option>
-                                <option value="Other" ${transaction.category === 'Other' ? 'selected' : ''}>기타</option>
-                            </select>
-                        </div>
+                        <label>카테고리</label>
+                        <select class="ext-category">
+                             ${getCategoryOptionsHtml(transaction.category)}
+                        </select>
+                    </div>
                         <div class="form-group">
                             <label>유형</label>
                             <select class="ext-type">
@@ -449,6 +631,11 @@ $(document).ready(function () {
                 </div>
             `);
             container.append(item);
+
+            // Set selected category if it matches
+            if (transaction.category) {
+                item.find('.ext-category').val(transaction.category);
+            }
         });
 
         // Attach remove button handlers
@@ -513,7 +700,7 @@ $(document).ready(function () {
                 // Hide loading screen
                 $('#loading-screen').fadeOut();
 
-                // alert(`${response.data.length}개의 거래가 저장되었습니다!`); // Removed alert
+                showToast(`${response.data.length}개의 거래가 저장되었습니다!`, 'success');
                 $('#extracted-transactions-list').empty();
                 $('#preview-container').hide();
                 $('#extraction-result').hide();
@@ -526,7 +713,7 @@ $(document).ready(function () {
                 $('#loading-screen').fadeOut();
 
                 console.error('Error saving transactions:', err);
-                alert('거래 저장에 실패했습니다.');
+                showToast('거래 저장에 실패했습니다.', 'error');
             });
     });
 
@@ -658,26 +845,28 @@ $(document).ready(function () {
         }
 
         // Category Translations
-        const categoryTranslations = {
-            'Food': '식비',
-            'Transportation': '교통',
-            'Shopping': '쇼핑',
-            'Entertainment': '문화/여가',
-            'Healthcare': '의료/건강',
-            'Other': '기타'
-        };
+        const categoryTranslations = {};
+        categories.forEach(c => categoryTranslations[c.id] = c.name);
 
         sorted.forEach(t => {
+            const baseType = getTypeBase(t.type);
+            let typeColor = '#e74c3c';
+            if (baseType === 'INCOME') typeColor = '#2ecc71';
+            else if (baseType === 'SAVING') typeColor = '#3498db';
+
             const row = `
                 <tr>
                     <td><input type="checkbox" class="row-checkbox" data-id="${t.id}" /></td>
                     <td>${t.date}</td>
-                    <td>${categoryTranslations[t.category] || t.category}</td>
+                    <td>${categoryTranslations[t.id] || categoryTranslations[t.category] || t.category}</td>
                     <td>${t.place}</td>
                     <td>${t.memo || '-'}</td>
-                    <td style="color: ${t.type === 'INCOME' ? '#2ecc71' : '#e74c3c'}">${t.type === 'INCOME' ? '수입' : '지출'}</td>
+                    <td style="color: ${typeColor}">${getTypeName(t.type)}</td>
                     <td>₩${t.amount.toLocaleString()}</td>
-                    <td><button onclick="deleteTransaction('${t.id}')" style="border:none;background:none;cursor:pointer;color:#e74c3c;"><i class="fa-solid fa-trash"></i></button></td>
+                    <td>
+                        <button onclick="openEditModal('${t.id}')" style="border:none;background:none;cursor:pointer;color:#3498db; margin-right:5px;"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteTransaction('${t.id}')" style="border:none;background:none;cursor:pointer;color:#e74c3c;"><i class="fa-solid fa-trash"></i></button>
+                    </td>
                 </tr>
             `;
             tbody.append(row);
@@ -754,19 +943,28 @@ $(document).ready(function () {
 
         let income = 0;
         let expense = 0;
+        let saving = 0;
         const categoryMap = {};
 
         filteredTxs.forEach(t => {
-            if (t.type === 'INCOME') income += t.amount;
-            else {
+            const baseType = getTypeBase(t.type);
+
+            if (baseType === 'INCOME') {
+                income += t.amount;
+            } else if (baseType === 'SAVING') {
+                saving += t.amount;
+            } else { // EXPENSE
                 expense += t.amount;
+                // Only track category for Expense (and maybe Saving?)
                 categoryMap[t.category] = (categoryMap[t.category] || 0) + t.amount;
             }
         });
 
         $('#total-income').text(`₩${income.toLocaleString()}`);
         $('#total-expense').text(`₩${expense.toLocaleString()}`);
-        $('#total-balance').text(`₩${(income - expense).toLocaleString()}`);
+        $('#total-saving').text(`₩${saving.toLocaleString()}`);
+        // Balance = Income - Expense - Saving
+        $('#total-balance').text(`₩${(income - expense - saving).toLocaleString()}`);
 
         if ($('#dashboard').hasClass('active')) {
             renderCharts(filteredTxs, categoryMap);
@@ -790,7 +988,7 @@ $(document).ready(function () {
         const dateMap = {};
         let barLabel = '일별 지출';
 
-        transactions.filter(t => t.type === 'EXPENSE').forEach(t => {
+        transactions.filter(t => getTypeBase(t.type) === 'EXPENSE').forEach(t => {
             let key = t.date; // Default YYYY-MM-DD
 
             if (currentDashboardPeriod === PERIOD_ALL) {
@@ -849,17 +1047,20 @@ $(document).ready(function () {
             }
         });
 
-        // Pie Chart
-        const categoryTranslations = {
-            'Food': '식비',
-            'Transportation': '교통',
-            'Shopping': '쇼핑',
-            'Entertainment': '문화/여가',
-            'Healthcare': '의료/건강',
-            'Other': '기타'
-        };
+
+
+        // Pie Chart (Update to use dynamic categories)
+        const categoryTranslations = {}; // Map ID to Name
+        categories.forEach(c => categoryTranslations[c.id] = c.name);
 
         const koreanLabels = Object.keys(categoryMap).map(key => categoryTranslations[key] || key);
+        // Map colors? 
+        // We need a color map ensuring consistent colors
+        const colorMap = {};
+        categories.forEach(c => colorMap[c.id] = c.color);
+
+        // Use colors from our category definitions if available
+        const bgColors = Object.keys(categoryMap).map(key => colorMap[key] || '#cccccc');
 
         pieChart = new Chart(ctxPie, {
             type: 'doughnut',
@@ -867,7 +1068,7 @@ $(document).ready(function () {
                 labels: koreanLabels,
                 datasets: [{
                     data: Object.values(categoryMap),
-                    backgroundColor: ['#ff9a9e', '#fad0c4', '#a18cd1', '#fbc2eb', '#8fd3f4', '#84fab0']
+                    backgroundColor: bgColors
                 }]
             },
             options: {
@@ -887,5 +1088,88 @@ $(document).ready(function () {
                 }
             }
         });
+    }
+
+    // --- Edit Modal Logic ---
+    window.openEditModal = function (id) {
+        const transaction = transactions.find(t => t.id == id); // Use == for loose equality if ID types differ
+        if (!transaction) return;
+
+        $('#edit-id').val(transaction.id);
+        $('#edit-date').val(transaction.date);
+        $('#edit-place').val(transaction.place);
+        $('#edit-amount').val(transaction.amount);
+        $('#edit-type').val(transaction.type);
+        $('#edit-memo').val(transaction.memo || '');
+
+        // Populate Categories
+        const optionsHtml = getCategoryOptionsHtml();
+        $('#edit-category').html(optionsHtml);
+        $('#edit-category').val(transaction.category);
+
+        $('#edit-modal').css('display', 'flex').fadeIn(200);
+    };
+
+    $('.close-modal, #cancel-edit-btn').on('click', function () {
+        $('#edit-modal').fadeOut(200);
+    });
+
+    // Close modal if clicking outside
+    $(window).on('click', function (event) {
+        if ($(event.target).is('#edit-modal')) {
+            $('#edit-modal').fadeOut(200);
+        }
+    });
+
+    $('#edit-form').on('submit', function (e) {
+        e.preventDefault();
+
+        const id = $('#edit-id').val();
+        const updatedData = {
+            id: id,
+            date: $('#edit-date').val(),
+            place: $('#edit-place').val(),
+            amount: parseFloat($('#edit-amount').val()),
+            category: $('#edit-category').val(),
+            type: $('#edit-type').val(),
+            memo: $('#edit-memo').val()
+        };
+
+        // Optimistic UI Update (optional, but good for speed)
+        // const idx = transactions.findIndex(t => t.id == id);
+        // if(idx !== -1) transactions[idx] = updatedData;
+
+        axios.put(`/api/transactions/${id}`, updatedData)
+            .then(res => {
+                showToast('거래 내역이 수정되었습니다.', 'success');
+                $('#edit-modal').fadeOut(200);
+                loadTransactions(); // Reload to be sure
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('수정에 실패했습니다.', 'error');
+            });
+    });
+
+    // --- Toast Logic ---
+    function showToast(message, type = 'success') {
+        const icon = type === 'success' ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-circle-exclamation"></i>';
+
+        const toast = $(`
+            <div class="toast ${type}">
+                ${icon}
+                <span>${message}</span>
+            </div>
+        `);
+
+        $('#toast-container').append(toast);
+
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.css('animation', 'fadeOutRight 0.3s ease-in forwards');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 3000);
     }
 });

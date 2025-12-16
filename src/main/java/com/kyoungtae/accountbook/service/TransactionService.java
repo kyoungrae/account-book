@@ -43,6 +43,20 @@ public class TransactionService {
         return newTransactions;
     }
 
+    public synchronized Transaction updateTransaction(String id, Transaction updatedTransaction) {
+        List<Transaction> transactions = loadData();
+        for (int i = 0; i < transactions.size(); i++) {
+            if (transactions.get(i).getId().equals(id)) {
+                // Keep the ID, update other fields
+                updatedTransaction.setId(id);
+                transactions.set(i, updatedTransaction);
+                saveData(transactions);
+                return updatedTransaction;
+            }
+        }
+        throw new RuntimeException("Transaction not found: " + id);
+    }
+
     public synchronized void deleteTransaction(String id) {
         List<Transaction> transactions = loadData();
         transactions.removeIf(t -> t.getId().equals(id));

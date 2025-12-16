@@ -32,6 +32,7 @@
                 <li data-target="upload"><i class="fa-solid fa-file-invoice"></i> 영수증 업로드</li>
                 <li data-target="direct-input"><i class="fa-solid fa-pen-to-square"></i> 직접 입력</li>
                 <li data-target="transactions"><i class="fa-solid fa-list"></i> 거래 내역</li>
+                <li data-target="categories"><i class="fa-solid fa-tags"></i> 카테고리/유형 관리</li>
             </ul>
         </nav>
 
@@ -66,6 +67,10 @@
                     <div class="card expense">
                         <h3>지출</h3>
                         <p id="total-expense">₩0</p>
+                    </div>
+                    <div class="card saving">
+                        <h3>저축</h3>
+                        <p id="total-saving">₩0</p>
                     </div>
                     <div class="card balance">
                         <h3>잔액</h3>
@@ -158,19 +163,13 @@
                                 <div class="form-group">
                                     <label>카테고리</label>
                                     <select class="man-category">
-                                        <option value="Food">식비</option>
-                                        <option value="Transportation">교통</option>
-                                        <option value="Shopping">쇼핑</option>
-                                        <option value="Entertainment">문화/여가</option>
-                                        <option value="Healthcare">의료/건강</option>
-                                        <option value="Other">기타</option>
+                                        <!-- Options populated dynamically -->
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label>유형</label>
                                     <select class="man-type">
-                                        <option value="EXPENSE">지출</option>
-                                        <option value="INCOME">수입</option>
+                                        <!-- Options populated dynamically -->
                                     </select>
                                 </div>
                             </div>
@@ -231,6 +230,77 @@
                     </table>
                 </div>
             </section>
+
+            <!-- Category & Type Management View -->
+            <section id="categories" class="view">
+                <div class="filter-tabs" style="justify-content: flex-start; margin-bottom: 20px;">
+                    <button class="filter-tab active" data-sub-target="manage-categories">카테고리</button>
+                    <button class="filter-tab" data-sub-target="manage-types">유형</button>
+                </div>
+
+                <!-- Category Management Tab -->
+                <div id="manage-categories">
+                    <div class="form-container">
+                        <h3>새 카테고리 추가</h3>
+                        <div class="form-row" style="margin-top:20px; align-items: flex-end;">
+                            <div class="form-group" style="flex:1;">
+                                <label>카테고리명</label>
+                                <input type="text" id="new-category-name" placeholder="예: 운동" />
+                            </div>
+                            <div class="form-group" style="width: 100px;">
+                                <label>색상</label>
+                                <input type="color" id="new-category-color" value="#4facfe"
+                                    style="height:45px; padding:2px;" />
+                            </div>
+                            <div class="form-group">
+                                <button id="add-category-btn" class="btn-primary" style="height:45px; margin-bottom:0;">
+                                    <i class="fa-solid fa-plus"></i> 추가
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-container" style="margin-top:2rem;">
+                        <h3>카테고리 목록</h3>
+                        <div id="category-list" class="category-list">
+                            <!-- Loaded via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Type Management Tab -->
+                <div id="manage-types" style="display:none;">
+                    <div class="form-container">
+                        <h3>새 유형 추가</h3>
+                        <div class="form-row" style="margin-top:20px; align-items: flex-end;">
+                            <div class="form-group" style="flex:1;">
+                                <label>유형명</label>
+                                <input type="text" id="new-type-name" placeholder="예: 이체" />
+                            </div>
+                            <div class="form-group">
+                                <label>기본 속성</label>
+                                <select id="new-type-base" style="height:45px;">
+                                    <option value="EXPENSE">지출 (마이너스)</option>
+                                    <option value="INCOME">수입 (플러스)</option>
+                                    <option value="SAVING">저축 (마이너스/자산)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <button id="add-type-btn" class="btn-primary" style="height:45px; margin-bottom:0;">
+                                    <i class="fa-solid fa-plus"></i> 추가
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-container" style="margin-top:2rem;">
+                        <h3>유형 목록</h3>
+                        <div id="type-list" class="category-list">
+                            <!-- Loaded via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -239,6 +309,59 @@
         <div class="spinner"></div>
         <p>잠시만 기다려주세요...</p>
     </div>
+
+    <!-- Edit Transaction Modal -->
+    <div id="edit-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>거래 내역 수정</h2>
+            <form id="edit-form">
+                <input type="hidden" id="edit-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>날짜</label>
+                        <input type="date" id="edit-date" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>장소</label>
+                        <input type="text" id="edit-place" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>금액</label>
+                        <input type="number" id="edit-amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label>카테고리</label>
+                        <select id="edit-category"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>유형</label>
+                        <select id="edit-type">
+                            <option value="EXPENSE">지출</option>
+                            <option value="INCOME">수입</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="width: 100%;">
+                        <label>메모</label>
+                        <input type="text" id="edit-memo" placeholder="메모를 입력하세요">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancel-edit-btn">취소</button>
+                    <button type="submit" class="btn-primary">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
 
     <script src="/js/app.js"></script>
 </body>
