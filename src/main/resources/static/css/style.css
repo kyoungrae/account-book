@@ -261,7 +261,7 @@ h2 {
 
 .btn-primary {
     justify-content: center;
-    width: 80%;
+    width: 100%;
     text-align: center;
     padding: 1rem;
     background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
