@@ -456,16 +456,34 @@ input[type="checkbox"] {
     margin: 0;
 }
 
+
 /* Upload Split Layout */
 .upload-split-layout {
+    display: flex;
+    justify-content: center;
+    transition: all 0.5s ease;
+    width: 100%;
+}
+
+.upload-split-layout .upload-left-col {
+    width: 100%;
+    max-width: 600px;
+    transition: all 0.5s ease;
+}
+
+.upload-split-layout.active {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
     align-items: start;
 }
 
+.upload-split-layout.active .upload-left-col {
+    max-width: 100%;
+}
+
 @media (max-width: 900px) {
-    .upload-split-layout {
+    .upload-split-layout.active {
         grid-template-columns: 1fr;
     }
 }
@@ -473,6 +491,7 @@ input[type="checkbox"] {
 .upload-split-layout .upload-container {
     max-width: 100%;
     margin: 0;
+    width: 100%;
 }
 
 .upload-split-layout .form-container {

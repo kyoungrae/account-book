@@ -74,6 +74,7 @@ $(document).ready(function () {
         }).then(response => {
             const extractedTransactions = response.data; // Now an array
             displayExtractedTransactions(extractedTransactions);
+            $('.upload-split-layout').addClass('active');
             $('#extraction-result').fadeIn();
             dropZone.find('p').text('영수증 이미지를 드래그하거나 클릭하여 업로드하세요');
         }).catch(err => {
@@ -144,6 +145,7 @@ $(document).ready(function () {
                 if ($('.extracted-item').length === 0) {
                     $('#save-all-btn').hide();
                     $('#extraction-result').hide();
+                    $('.upload-split-layout').removeClass('active');
                 }
             });
         });
@@ -188,6 +190,7 @@ $(document).ready(function () {
                 $('#preview-container').hide();
                 $('#extraction-result').hide();
                 $('#save-all-btn').hide();
+                $('.upload-split-layout').removeClass('active');
                 loadTransactions();
             })
             .catch(err => {
