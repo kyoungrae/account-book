@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Axios -->
@@ -29,6 +30,7 @@
             <ul class="nav-links">
                 <li class="active" data-target="dashboard"><i class="fa-solid fa-chart-pie"></i> 대시보드</li>
                 <li data-target="upload"><i class="fa-solid fa-file-invoice"></i> 영수증 업로드</li>
+                <li data-target="direct-input"><i class="fa-solid fa-pen-to-square"></i> 직접 입력</li>
                 <li data-target="transactions"><i class="fa-solid fa-list"></i> 거래 내역</li>
             </ul>
         </nav>
@@ -38,14 +40,24 @@
             <!-- Header -->
             <header>
                 <h2 id="page-title">대시보드</h2>
-                <div class="user-profile">
-                    <span>관리자</span>
-                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
-                </div>
+
             </header>
 
             <!-- Dashboard View -->
             <section id="dashboard" class="view active">
+                <div class="filter-tabs dashboard-filters">
+                    <button class="filter-tab active" data-period="all">전체</button>
+                    <button class="filter-tab" data-period="year">년도별</button>
+                    <button class="filter-tab" data-period="month">월별</button>
+                    <button class="filter-tab" data-period="day">일별</button>
+                </div>
+                <div id="period-selector-dashboard" class="period-selector" style="display:none;">
+                    <!-- Dynamically populated year/month/day selectors -->
+                    <select id="dashboard-year-select" class="period-select"></select>
+                    <!-- Month Buttons Container -->
+                    <div id="dashboard-month-buttons" class="month-selector-container" style="display:none;"></div>
+                    <input type="date" id="dashboard-date-select" class="period-input" style="display:none;">
+                </div>
                 <div class="stats-cards">
                     <div class="card income">
                         <h3>수입</h3>
@@ -62,6 +74,8 @@
                 </div>
                 <div class="charts-container">
                     <div class="chart-box">
+                        <h3 id="bar-chart-header" style="margin-bottom: 15px; font-size: 1.1rem; color: #333;">일별 지출
+                        </h3>
                         <canvas id="expenseChart"></canvas>
                     </div>
                     <div class="chart-box">
@@ -78,8 +92,8 @@
                             <div class="drop-zone" id="drop-zone">
                                 <i class="fa-solid fa-cloud-arrow-up"></i>
                                 <p>영수증 이미지를 드래그하거나 클릭하여 업로드하세요</p>
-                                <input type="file" id="file-input" hidden accept="image/*">
                             </div>
+                            <input type="file" id="file-input" hidden accept="image/*">
                             <div id="preview-container" style="display:none;">
                                 <img id="image-preview" src="" alt="미리보기">
                             </div>
@@ -103,8 +117,92 @@
                 </div>
             </section>
 
+            <!-- Direct Input View -->
+            <section id="direct-input" class="view">
+                <div class="form-container" style="max-width: 800px;">
+                    <div class="header-action"
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3>거래 내역 입력</h3>
+                        <button id="add-manual-row-btn" class="btn-secondary"
+                            style="background:#3498db; color:white; border:none; padding:8px 15px; border-radius:8px; cursor:pointer;">
+                            <i class="fa-solid fa-plus"></i> 항목 추가
+                        </button>
+                    </div>
+
+                    <div id="manual-input-list">
+                        <!-- Initial Row -->
+                        <div class="manual-item" data-id="manual-0">
+                            <div class="manual-item-header"
+                                style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                                <h4>거래 1</h4>
+                                <button class="remove-manual-btn" onclick="removeManualItem('manual-0')"
+                                    style="display:none;">
+                                    <i class="fa-solid fa-minus"></i>
+                                </button>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>날짜</label>
+                                    <input type="date" class="man-date" required />
+                                </div>
+                                <div class="form-group">
+                                    <label>장소</label>
+                                    <input type="text" class="man-place" placeholder="예: 스타벅스" required />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>금액</label>
+                                    <input type="number" class="man-amount" placeholder="0" required />
+                                </div>
+                                <div class="form-group">
+                                    <label>카테고리</label>
+                                    <select class="man-category">
+                                        <option value="Food">식비</option>
+                                        <option value="Transportation">교통</option>
+                                        <option value="Shopping">쇼핑</option>
+                                        <option value="Entertainment">문화/여가</option>
+                                        <option value="Healthcare">의료/건강</option>
+                                        <option value="Other">기타</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>유형</label>
+                                    <select class="man-type">
+                                        <option value="EXPENSE">지출</option>
+                                        <option value="INCOME">수입</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group" style="grid-column: span 3;">
+                                    <label>메모</label>
+                                    <input type="text" class="man-memo" placeholder="메모를 입력하세요" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="save-manual-btn" class="btn-primary" style="margin-top: 20px;">
+                        <i class="fa-solid fa-check"></i> 저장하기
+                    </button>
+                </div>
+            </section>
+
             <!-- Transactions View -->
             <section id="transactions" class="view">
+                <div class="filter-tabs transaction-filters">
+                    <button class="filter-tab active" data-period="all">전체</button>
+                    <button class="filter-tab" data-period="year">년도별</button>
+                    <button class="filter-tab" data-period="month">월별</button>
+                    <button class="filter-tab" data-period="day">일별</button>
+                </div>
+                <div id="period-selector-transactions" class="period-selector" style="display:none;">
+                    <select id="trans-year-select" class="period-select"></select>
+                    <!-- Month Buttons Container -->
+                    <div id="trans-month-buttons" class="month-selector-container" style="display:none;"></div>
+                    <input type="date" id="trans-date-select" class="period-input" style="display:none;">
+                </div>
                 <div class="table-actions">
 
                     <button id="delete-selected-btn" class="btn-danger" style="display:none;">
@@ -118,11 +216,12 @@
                                 <th style="width: 50px;">
                                     <input type="checkbox" id="select-all-checkbox" />
                                 </th>
-                                <th>날짜</th>
-                                <th>카테고리</th>
-                                <th>장소</th>
-                                <th>유형</th>
-                                <th>금액</th>
+                                <th class="sortable" data-sort="date">날짜 <i class="fa-solid fa-sort"></i></th>
+                                <th class="sortable" data-sort="category">카테고리 <i class="fa-solid fa-sort"></i></th>
+                                <th class="sortable" data-sort="place">장소 <i class="fa-solid fa-sort"></i></th>
+                                <th class="sortable" data-sort="memo">메모 <i class="fa-solid fa-sort"></i></th>
+                                <th class="sortable" data-sort="type">유형 <i class="fa-solid fa-sort"></i></th>
+                                <th class="sortable" data-sort="amount">금액 <i class="fa-solid fa-sort"></i></th>
                                 <th>작업</th>
                             </tr>
                         </thead>
@@ -133,6 +232,12 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" style="display:none;">
+        <div class="spinner"></div>
+        <p>잠시만 기다려주세요...</p>
     </div>
 
     <script src="/js/app.js"></script>

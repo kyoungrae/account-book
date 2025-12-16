@@ -14,4 +14,5 @@ public class Transaction {
     private String category;
     private String place; // Sangyongcheo
     private String type; // INCOME or EXPENSE
+    private String memo; // Added memo field
 }

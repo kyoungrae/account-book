@@ -4,8 +4,20 @@ $(document).ready(function () {
     let myChart = null;
     let pieChart = null;
 
+    // Filter Constants
+    const PERIOD_ALL = 'all';
+    const PERIOD_YEAR = 'year';
+    const PERIOD_MONTH = 'month';
+    const PERIOD_DAY = 'day';
+
+    let currentDashboardPeriod = PERIOD_ALL;
+    let currentTransactionPeriod = PERIOD_ALL;
+
     // Load initial data
     loadTransactions();
+
+    // Initialize Period Selectors
+    initPeriodSelectors();
 
     // Navigation
     $('.nav-links li').click(function () {
@@ -17,6 +29,7 @@ $(document).ready(function () {
         $('.view').removeClass('active');
         $('#' + target).addClass('active');
 
+        // Removed the icon and brand name text from the header, but kept the title update
         $('#page-title').text($(this).text().trim());
 
         // Re-render charts when switching to dashboard to fix resizing issues
@@ -24,6 +37,301 @@ $(document).ready(function () {
             updateDashboard();
         }
     });
+
+    // --- Direct Input Logic Start ---
+
+    let manualIndex = 1;
+
+    $('#add-manual-row-btn').on('click', function () {
+        const uniqueId = `manual-${Date.now()}-${manualIndex++}`;
+        const count = $('.manual-item').length + 1;
+
+        const item = $(`
+            <div class="manual-item" data-id="${uniqueId}">
+                <div class="manual-item-header" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <h4>거래 ${count}</h4>
+                    <button class="remove-manual-btn" data-remove-id="${uniqueId}">
+                        <i class="fa-solid fa-minus"></i>
+                    </button>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>날짜</label>
+                        <input type="date" class="man-date" required />
+                    </div>
+                    <div class="form-group">
+                        <label>장소</label>
+                        <input type="text" class="man-place" placeholder="예: 스타벅스" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>금액</label>
+                        <input type="number" class="man-amount" placeholder="0" required />
+                    </div>
+                    <div class="form-group">
+                        <label>카테고리</label>
+                        <select class="man-category">
+                            <option value="Food">식비</option>
+                            <option value="Transportation">교통</option>
+                            <option value="Shopping">쇼핑</option>
+                            <option value="Entertainment">문화/여가</option>
+                            <option value="Healthcare">의료/건강</option>
+                            <option value="Other">기타</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>유형</label>
+                        <select class="man-type">
+                            <option value="EXPENSE">지출</option>
+                            <option value="INCOME">수입</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: span 3;">
+                        <label>메모</label>
+                        <input type="text" class="man-memo" placeholder="메모를 입력하세요" />
+                    </div>
+                </div>
+            </div>
+        `);
+
+        // Hide remove button for first item if it's the only one
+        if ($('.manual-item').length === 0) {
+            item.find('.remove-manual-btn').hide();
+        } else {
+            $('.manual-item .remove-manual-btn').show(); // Show all remove buttons
+        }
+
+        $('#manual-input-list').append(item);
+
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        item.find('.man-date').val(today);
+
+        // Attach remove handler
+        item.find('.remove-manual-btn').on('click', function () {
+            const removeId = $(this).data('remove-remove-id'); // Note: previously defined as data-remove-id
+            // Better to just traverse up
+            $(this).closest('.manual-item').fadeOut(300, function () {
+                $(this).remove();
+                updateManualItemHeaders();
+                if ($('.manual-item').length === 1) {
+                    $('.manual-item .remove-manual-btn').hide();
+                }
+            });
+        });
+    });
+
+    // Initial remove handler for the first item (though it's hidden initially)
+    window.removeManualItem = function (id) {
+        $(`.manual-item[data-id="${id}"]`).remove();
+        updateManualItemHeaders();
+        if ($('.manual-item').length === 1) {
+            $('.manual-item .remove-manual-btn').hide();
+        }
+    };
+
+    function updateManualItemHeaders() {
+        $('.manual-item').each(function (index) {
+            $(this).find('h4').text(`거래 ${index + 1}`);
+        });
+        if ($('.manual-item').length <= 1) {
+            $('.manual-item .remove-manual-btn').hide();
+        } else {
+            $('.manual-item .remove-manual-btn').show();
+        }
+    }
+
+    $('#save-manual-btn').on('click', function () {
+        const transactions = [];
+        let isValid = true;
+
+        $('.manual-item').each(function () {
+            const item = $(this);
+            const date = item.find('.man-date').val();
+            const place = item.find('.man-place').val();
+            const amount = parseFloat(item.find('.man-amount').val());
+            const category = item.find('.man-category').val();
+            const type = item.find('.man-type').val();
+            const memo = item.find('.man-memo').val();
+
+            if (!date || !place || isNaN(amount)) {
+                isValid = false;
+                item.css('border', '1px solid #e74c3c');
+            } else {
+                item.css('border', '1px solid rgba(0,0,0,0.08)');
+                transactions.push({ date, place, amount, category, type, memo });
+            }
+        });
+
+        if (!isValid) {
+            alert('모든 필수 항목을 입력해주세요.');
+            return;
+        }
+
+        $('#loading-screen').fadeIn();
+
+        axios.post('/api/transactions/batch', transactions)
+            .then(res => {
+                $('#loading-screen').fadeOut();
+                // alert(`${res.data.length}개의 거래가 저장되었습니다!`); // Removed alert
+
+                // Reset form to one empty row
+                $('#manual-input-list').empty();
+                // Add one initial row programmatically to keep listeners clean or just reset the HTML
+                // For simplicity, let's just trigger the add button logic but reset index
+                manualIndex = 1;
+                $('#add-manual-row-btn').click();
+
+                // Remove the extra one if we just cleared (since click adds one)
+                // Actually, empty() clears everything. click() adds one. Perfect.
+
+                // Reset headers
+                updateManualItemHeaders();
+
+            })
+            .catch(err => {
+                $('#loading-screen').fadeOut();
+                alert('저장 중 오류가 발생했습니다.');
+            });
+    });
+
+    // Set default date for existing static row
+    // Wait for document ready
+    $(function () {
+        const today = new Date().toISOString().split('T')[0];
+        $('.man-date').val(today);
+    });
+
+    // --- Direct Input Logic End ---
+
+
+
+
+
+    // --- Filter Logic Start ---
+
+    function initPeriodSelectors() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1; // 1-12
+        const today = now.toISOString().split('T')[0];
+
+        // Populate Years (Current +/- 5 years)
+        const yearOptions = [];
+        for (let y = currentYear + 5; y >= currentYear - 5; y--) {
+            yearOptions.push(`<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}년</option>`);
+        }
+        $('#dashboard-year-select, #trans-year-select').html(yearOptions.join(''));
+
+        // Generate Month Buttons
+        const monthButtons = [];
+        for (let m = 1; m <= 12; m++) {
+            monthButtons.push(`<button class="month-btn ${m === currentMonth ? 'active' : ''}" data-month="${m}">${m}월</button>`);
+        }
+        $('#dashboard-month-buttons, #trans-month-buttons').html(monthButtons.join(''));
+
+        // Set default date
+        $('#dashboard-date-select, #trans-date-select').val(today);
+
+        // Attach Event Listeners for Filters
+        attachFilterListeners('dashboard');
+        attachFilterListeners('trans'); // using 'trans' as prefix for transactions id
+    }
+
+    function attachFilterListeners(prefix) {
+        // Tab Clicks
+        $(`.${prefix === 'dashboard' ? 'dashboard-filters' : 'transaction-filters'} .filter-tab`).on('click', function () {
+            const period = $(this).data('period');
+
+            // UI Update
+            $(`.${prefix === 'dashboard' ? 'dashboard-filters' : 'transaction-filters'} .filter-tab`).removeClass('active');
+            $(this).addClass('active');
+
+            // Show/Hide Selectors
+            const selectorContainer = $(`#period-selector-${prefix === 'dashboard' ? 'dashboard' : 'transactions'}`);
+            const yearSelect = $(`#${prefix}-year-select`);
+            const monthButtons = $(`#${prefix}-month-buttons`);
+            const dateSelect = $(`#${prefix}-date-select`);
+
+            // Reset visibility
+            selectorContainer.hide();
+            yearSelect.hide();
+            monthButtons.hide();
+            dateSelect.hide();
+
+            if (period !== PERIOD_ALL) {
+                selectorContainer.css('display', 'flex'); // Use flex for gap
+                if (period === PERIOD_YEAR) {
+                    yearSelect.show();
+                } else if (period === PERIOD_MONTH) {
+                    yearSelect.show();
+                    monthButtons.css('display', 'flex');
+                } else if (period === PERIOD_DAY) {
+                    dateSelect.show();
+                }
+            }
+
+            // Update State & Refresh
+            if (prefix === 'dashboard') {
+                currentDashboardPeriod = period;
+                updateDashboard();
+            } else {
+                currentTransactionPeriod = period;
+                renderTable();
+            }
+        });
+
+        // Selector Config Changes
+        $(`#${prefix}-year-select, #${prefix}-date-select`).on('change', function () {
+            if (prefix === 'dashboard') {
+                updateDashboard();
+            } else {
+                renderTable();
+            }
+        });
+
+        // Month Button Clicks
+        $(`#${prefix}-month-buttons`).on('click', '.month-btn', function () {
+            $(`#${prefix}-month-buttons .month-btn`).removeClass('active');
+            $(this).addClass('active');
+
+            if (prefix === 'dashboard') {
+                updateDashboard();
+            } else {
+                renderTable();
+            }
+        });
+    }
+
+    function filterTransactions(txs, period, prefix) {
+        if (period === PERIOD_ALL) return txs;
+
+        const year = parseInt($(`#${prefix}-year-select`).val());
+        const month = parseInt($(`#${prefix}-month-buttons .month-btn.active`).data('month'));
+        const dateVal = $(`#${prefix}-date-select`).val();
+
+        return txs.filter(t => {
+            const tDate = new Date(t.date);
+            const tYear = tDate.getFullYear();
+            const tMonth = tDate.getMonth() + 1;
+            const tDateStr = t.date; // assuming YYYY-MM-DD
+
+            if (period === PERIOD_YEAR) {
+                return tYear === year;
+            } else if (period === PERIOD_MONTH) {
+                return tYear === year && tMonth === month;
+            } else if (period === PERIOD_DAY) {
+                return tDateStr === dateVal;
+            }
+            return true;
+        });
+    }
+
+    // --- Filter Logic End ---
+
 
     // File Upload (Drag & Drop)
     const dropZone = $('#drop-zone');
@@ -132,6 +440,12 @@ $(document).ready(function () {
                             </select>
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: span 3;">
+                            <label>메모</label>
+                            <input type="text" class="ext-memo" placeholder="메모를 입력하세요" value="${transaction.memo || ''}" />
+                        </div>
+                    </div>
                 </div>
             `);
             container.append(item);
@@ -170,22 +484,36 @@ $(document).ready(function () {
 
         items.each(function () {
             const item = $(this);
+            const date = item.find('.ext-date').val();
+            const place = item.find('.ext-place').val();
+            const amount = parseFloat(item.find('.ext-amount').val());
+            const category = item.find('.ext-category').val();
+            const type = item.find('.ext-type').val();
+            const memo = item.find('.ext-memo').val();
+
             const transaction = {
-                date: item.find('.ext-date').val(),
-                place: item.find('.ext-place').val(),
-                amount: parseFloat(item.find('.ext-amount').val()),
-                category: item.find('.ext-category').val(),
-                type: item.find('.ext-type').val()
+                date: date,
+                place: place,
+                amount: amount,
+                category: category,
+                type: type,
+                memo: memo
             };
             console.log('Transaction to save:', transaction); // Debug log
             transactions.push(transaction);
         });
 
+        // Show loading screen
+        $('#loading-screen').fadeIn();
+
         // Use batch endpoint to save all transactions at once
         axios.post('/api/transactions/batch', transactions)
             .then(response => {
                 console.log('Saved transactions:', response.data);
-                alert(`${response.data.length}개의 거래가 저장되었습니다!`);
+                // Hide loading screen
+                $('#loading-screen').fadeOut();
+
+                // alert(`${response.data.length}개의 거래가 저장되었습니다!`); // Removed alert
                 $('#extracted-transactions-list').empty();
                 $('#preview-container').hide();
                 $('#extraction-result').hide();
@@ -194,6 +522,9 @@ $(document).ready(function () {
                 loadTransactions();
             })
             .catch(err => {
+                // Hide loading screen
+                $('#loading-screen').fadeOut();
+
                 console.error('Error saving transactions:', err);
                 alert('거래 저장에 실패했습니다.');
             });
@@ -218,15 +549,24 @@ $(document).ready(function () {
             type: $('#t-type').val()
         };
 
+        // Show loading screen
+        $('#loading-screen').fadeIn();
+
         axios.post('/api/transactions', transaction)
             .then(res => {
-                alert('저장되었습니다!');
+                // Hide loading screen
+                $('#loading-screen').fadeOut();
+
                 $('#transaction-form')[0].reset();
                 $('#preview-container').hide();
                 $('#extraction-result').hide();
                 loadTransactions(); // Reload data
             })
-            .catch(err => alert('거래 저장 중 오류가 발생했습니다'));
+            .catch(err => {
+                // Hide loading screen
+                $('#loading-screen').fadeOut();
+                alert('거래 저장 중 오류가 발생했습니다');
+            });
     });
 
     function loadTransactions() {
@@ -238,19 +578,103 @@ $(document).ready(function () {
             });
     }
 
+    let currentSort = {
+        column: 'date',
+        direction: 'desc'
+    };
+
+    // Table Header Click (Sorting)
+    $('#transaction-table th.sortable').on('click', function () {
+        const column = $(this).data('sort');
+
+        // Cycle: ASC -> DESC -> DEFAULT (null)
+        if (currentSort.column === column) {
+            if (currentSort.direction === 'asc') {
+                currentSort.direction = 'desc';
+            } else if (currentSort.direction === 'desc') {
+                currentSort.direction = null; // Default state
+                currentSort.column = null;
+            } else {
+                currentSort.direction = 'asc';
+            }
+        } else {
+            currentSort.column = column;
+            currentSort.direction = 'asc'; // Start with ASC for new column
+        }
+
+        renderTable();
+    });
+
     function renderTable() {
         const tbody = $('#transaction-table tbody');
         tbody.empty();
-        // Sort by date desc
-        const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Update Header Icons
+        $('#transaction-table th.sortable').removeClass('asc desc');
+        $('#transaction-table th.sortable i').attr('class', 'fa-solid fa-sort'); // Reset icons
+
+        if (currentSort.column && currentSort.direction) {
+            const activeHeader = $(`#transaction-table th[data-sort="${currentSort.column}"]`);
+            activeHeader.addClass(currentSort.direction);
+            const icon = activeHeader.find('i');
+            icon.removeClass('fa-sort').addClass(currentSort.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+        }
+
+        // Filter transactions for Transactions View
+        const filtered = filterTransactions(transactions, currentTransactionPeriod, 'trans');
+
+        let sorted = [...filtered];
+
+        // Sort logic
+        if (currentSort.column && currentSort.direction) {
+            sorted.sort((a, b) => {
+                let valA = a[currentSort.column];
+                let valB = b[currentSort.column];
+
+                // Handle potential null/undefined
+                if (valA === undefined || valA === null) valA = '';
+                if (valB === undefined || valB === null) valB = '';
+
+                // Type specific sorting
+                if (currentSort.column === 'amount') {
+                    valA = parseFloat(valA);
+                    valB = parseFloat(valB);
+                } else if (currentSort.column === 'date') {
+                    valA = new Date(valA);
+                    valB = new Date(valB);
+                } else {
+                    // String comparison
+                    valA = valA.toString().toLowerCase();
+                    valB = valB.toString().toLowerCase();
+                }
+
+                if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else {
+            // Default Sort: Date Descending
+            sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        // Category Translations
+        const categoryTranslations = {
+            'Food': '식비',
+            'Transportation': '교통',
+            'Shopping': '쇼핑',
+            'Entertainment': '문화/여가',
+            'Healthcare': '의료/건강',
+            'Other': '기타'
+        };
 
         sorted.forEach(t => {
             const row = `
                 <tr>
                     <td><input type="checkbox" class="row-checkbox" data-id="${t.id}" /></td>
                     <td>${t.date}</td>
-                    <td>${t.category}</td>
+                    <td>${categoryTranslations[t.category] || t.category}</td>
                     <td>${t.place}</td>
+                    <td>${t.memo || '-'}</td>
                     <td style="color: ${t.type === 'INCOME' ? '#2ecc71' : '#e74c3c'}">${t.type === 'INCOME' ? '수입' : '지출'}</td>
                     <td>₩${t.amount.toLocaleString()}</td>
                     <td><button onclick="deleteTransaction('${t.id}')" style="border:none;background:none;cursor:pointer;color:#e74c3c;"><i class="fa-solid fa-trash"></i></button></td>
@@ -261,6 +685,9 @@ $(document).ready(function () {
 
         // Update checkbox event listeners
         updateCheckboxListeners();
+        // Reset "Select All" since list re-rendered
+        $('#select-all-checkbox').prop('checked', false);
+        updateDeleteButton();
     }
 
     function updateCheckboxListeners() {
@@ -322,12 +749,14 @@ $(document).ready(function () {
     };
 
     function updateDashboard() {
-        // Stats
+        // Stats logic with filtering
+        const filteredTxs = filterTransactions(transactions, currentDashboardPeriod, 'dashboard');
+
         let income = 0;
         let expense = 0;
         const categoryMap = {};
 
-        transactions.forEach(t => {
+        filteredTxs.forEach(t => {
             if (t.type === 'INCOME') income += t.amount;
             else {
                 expense += t.amount;
@@ -340,47 +769,102 @@ $(document).ready(function () {
         $('#total-balance').text(`₩${(income - expense).toLocaleString()}`);
 
         if ($('#dashboard').hasClass('active')) {
-            renderCharts(transactions, categoryMap);
+            renderCharts(filteredTxs, categoryMap);
         }
     }
 
     function renderCharts(transactions, categoryMap) {
+        // Register the plugin (if not already registered globally, though usually safe to do here or check)
+        // With CDN UMD, it might be auto-registered, but explicit registration ensures it works if not.
+        if (typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+
         const ctxBar = document.getElementById('expenseChart').getContext('2d');
         const ctxPie = document.getElementById('categoryPieChart').getContext('2d');
 
         if (myChart) myChart.destroy();
         if (pieChart) pieChart.destroy();
 
-        // Bar Chart: Daily Expenses
+        // Bar Chart: Dynamic Aggregation
         const dateMap = {};
+        let barLabel = '일별 지출';
+
         transactions.filter(t => t.type === 'EXPENSE').forEach(t => {
-            dateMap[t.date] = (dateMap[t.date] || 0) + t.amount;
+            let key = t.date; // Default YYYY-MM-DD
+
+            if (currentDashboardPeriod === PERIOD_ALL) {
+                key = t.date.substring(0, 4) + '년';
+                barLabel = '연도별 지출';
+            } else if (currentDashboardPeriod === PERIOD_YEAR) {
+                key = t.date.substring(5, 7) + '월';
+                barLabel = '월별 지출';
+            }
+            // For MONTH and DAY, keep YYYY-MM-DD (Daily)
+
+            dateMap[key] = (dateMap[key] || 0) + t.amount;
         });
 
-        const sortedDates = Object.keys(dateMap).sort();
+        const sortedLabels = Object.keys(dateMap).sort();
+
+        // Update Chart Title
+        $('#bar-chart-header').text(barLabel);
 
         myChart = new Chart(ctxBar, {
             type: 'bar',
             data: {
-                labels: sortedDates,
+                labels: sortedLabels,
                 datasets: [{
-                    label: '일별 지출 (₩)',
-                    data: sortedDates.map(d => dateMap[d]),
+                    label: barLabel,
+                    data: sortedLabels.map(k => dateMap[k]),
                     backgroundColor: '#4facfe',
                     borderRadius: 5
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false // Hide legend as we use HTML header
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function (value) {
+                            return '₩' + value.toLocaleString();
+                        },
+                        font: {
+                            weight: 'bold'
+                        },
+                        color: '#666'
+                    }
+                },
+                layout: {
+                    padding: {
+                        top: 30, // Space for labels
+                        bottom: 10 // Space for x-axis dates
+                    }
+                }
             }
         });
 
         // Pie Chart
+        const categoryTranslations = {
+            'Food': '식비',
+            'Transportation': '교통',
+            'Shopping': '쇼핑',
+            'Entertainment': '문화/여가',
+            'Healthcare': '의료/건강',
+            'Other': '기타'
+        };
+
+        const koreanLabels = Object.keys(categoryMap).map(key => categoryTranslations[key] || key);
+
         pieChart = new Chart(ctxPie, {
             type: 'doughnut',
             data: {
-                labels: Object.keys(categoryMap),
+                labels: koreanLabels,
                 datasets: [{
                     data: Object.values(categoryMap),
                     backgroundColor: ['#ff9a9e', '#fad0c4', '#a18cd1', '#fbc2eb', '#8fd3f4', '#84fab0']
@@ -388,11 +872,20 @@ $(document).ready(function () {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                plugins: {
+                    datalabels: {
+                        formatter: function (value, context) {
+                            // Display value or percentage if needed. Let's show Amount
+                            return '₩' + value.toLocaleString();
+                        },
+                        color: '#333',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
             }
         });
     }
-
-
-
 });
