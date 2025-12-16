@@ -390,32 +390,6 @@ $(document).ready(function () {
         });
     }
 
-    // Git Sync Button
-    $('#sync-git-btn').on('click', function () {
-        const btn = $(this);
-        const icon = btn.find('i');
-        const originalText = btn.html();
 
-        // Disable button and show loading state
-        btn.prop('disabled', true);
-        btn.html('<i class="fa-solid fa-sync fa-spin"></i> 동기화 중...');
 
-        axios.post('/api/sync')
-            .then(response => {
-                alert(response.data);
-                btn.html('<i class="fa-solid fa-check"></i> 동기화 완료');
-
-                // Reset button after 2 seconds
-                setTimeout(() => {
-                    btn.html(originalText);
-                    btn.prop('disabled', false);
-                }, 2000);
-            })
-            .catch(err => {
-                console.error(err);
-                alert('Git 동기화에 실패했습니다. Git 저장소가 설정되어 있는지 확인하세요.');
-                btn.html(originalText);
-                btn.prop('disabled', false);
-            });
-    });
 });
